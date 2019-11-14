@@ -29,7 +29,7 @@ class Policy(torch.nn.Module):
         self.fc3 = nn.Linear(84, 3)
 
         self.softmax = torch.nn.Softmax()
-        self.init_weights()
+        #self.init_weights()
 
     def init_weights(self):
         for m in self.modules():
@@ -43,14 +43,19 @@ class Policy(torch.nn.Module):
         x = x.view(-1, (32 * 43 * 43))
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        xn = self.fc3(x)
-        x = self.softmax(xn)
-        return x, xn
+        x = self.fc3(x)
+        x = self.softmax(x)
+        return x
 
 
 class Agent(object):
     def __init__(self):
-        self.train_device = "cpu"
+        if torch.cuda.is_available():
+            print("cuda")
+            self.train_device = "cuda"
+        else:
+            print("cpu")
+            self.train_device = "cpu"
         self.policy = Policy(200*200*3, 3).to(self.train_device)
         self.optimizer = torch.optim.RMSprop(self.policy.parameters(), lr=5e-3)
         self.gamma = 0.98
@@ -61,12 +66,13 @@ class Agent(object):
 
     def get_action(self, observation):
         self.states.append(observation)
-        flat = torch.tensor([observation], dtype=torch.float).permute((0,3,1,2))
-        action, non_soft = self.policy(flat)
+        flat = torch.tensor([observation], dtype=torch.float).permute((0,3,1,2)).to(self.train_device)
+        action = self.policy(flat)
 
-        self.action_probs.append(torch.tensor([np.amax(action.detach().numpy())], requires_grad=True))
-        print("action", action, "non soft", non_soft)
-        return np.argmax(action.detach().numpy())
+        self.action_probs.append(torch.tensor([np.amax(action.detach().cpu().numpy())], requires_grad=True))
+        print("action", action)
+        ps = action.detach().cpu().numpy().flatten()
+        return np.random.choice([0,1,2],p=ps)
 
     def get_name(self):
         return "Better than you"
@@ -88,7 +94,7 @@ class Agent(object):
 
         episode_tensor = torch.tensor(range(len(discounted_rewards)), dtype=torch.float)
         gammas = torch.zeros_like(episode_tensor) + torch.tensor([self.gamma], dtype=torch.float)
-        gamma_powers = torch.pow(gammas,episode_tensor)
+        gamma_powers = torch.pow(gammas,episode_tensor).to(self.train_device)
         discounted_rewards *= gamma_powers
 
         # TODO: Compute the optimization term (T1)
