@@ -91,7 +91,7 @@ if player.train:
                     plt.legend(["Player", "Opponent", "Ball X", "Ball Y", "Ball vx", "Ball vy"])
                     plt.show()
                     states.clear()
-                print("episode {} over. Broken WR: {:.3f}".format(games, win1/(games+1)), "wins:", win1, "steps:", steps, "frames seen:", player.frames_seen, "epsilon:", player.epsilon)
+                print("episode {} over. Broken WR: {:.3f}".format(games, win1/(games+1)), "wins:", win1, "steps:", steps, "frames seen:", player.frames_seen, "epsilon:", player.epsilon, "buffer:", len(player.memory.memory))
                 if games % 5 == 4:
                     env.switch_sides()
                 

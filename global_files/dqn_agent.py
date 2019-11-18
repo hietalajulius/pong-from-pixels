@@ -35,14 +35,14 @@ class DQN(nn.Module):
         return self.head(x.view(x.size(0), -1))
 
     def load_trained_model(self):
-        model_filename = '../local_files/trained_nets/net_at_12876_games.pth'
+        model_filename = '../local_files/trained_nets/net_at_29861_games.pth'
         self.load_state_dict(torch.load(model_filename, map_location=lambda storage, loc: storage))
         print('Trained model loaded from %s.' % model_filename)
         self.eval()
 
 
 class Agent(object):
-    def __init__(self, replay_buffer_size=500000,
+    def __init__(self, replay_buffer_size=1000000,
                  batch_size=32, gamma=0.99):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.n_actions = 3
@@ -60,7 +60,7 @@ class Agent(object):
         self.epsilon = 0.1
         self.frames_seen = 0
         self.target_epsilon = 0.1
-        self.target_frames = 5000000
+        self.target_frames = 10000000
         self.a = int((self.target_epsilon*self.target_frames)/(1-self.target_epsilon))
         self.train = True
 
@@ -87,7 +87,7 @@ class Agent(object):
         # Compute a mask of non-final states and concatenate the batch elements
         # (a final state would've been the one after which simulation ended)
         non_final_mask = 1-torch.tensor(batch.done, dtype=torch.uint8, device=self.device)
-        non_final_next_states = [s for nonfinal,s in zip(non_final_mask,
+        non_final_next_states = [s.to(self.device) for nonfinal,s in zip(non_final_mask,
                                      batch.next_state) if nonfinal > 0]
         non_final_next_states = torch.stack(non_final_next_states).squeeze(1)
 
@@ -98,7 +98,7 @@ class Agent(object):
         # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
         # columns of actions taken. These are the actions which would've been taken
         # for each batch state according to policy_net
-        state_action_values = self.policy_net(state_batch).gather(1, action_batch)
+        state_action_values = self.policy_net(state_batch.to(self.device)).gather(1, action_batch.to(self.device))
 
         # Compute V(s_{t+1}) for all next states.
         # Expected values of actions for non_final_next_states are computed based
@@ -108,7 +108,7 @@ class Agent(object):
         next_state_values = torch.zeros(self.batch_size, device=self.device)
         next_state_values[non_final_mask] = self.target_net(non_final_next_states).max(1)[0].detach()
         # Task 4: TODO: Compute the expected Q values
-        expected_state_action_values = self.gamma*next_state_values + reward_batch
+        expected_state_action_values = self.gamma*next_state_values + reward_batch.to(self.device)
 
         # Compute Huber loss
         loss = F.smooth_l1_loss(state_action_values.squeeze(),
@@ -137,7 +137,7 @@ class Agent(object):
             return np.random.choice([0,1,2]) #Early exit
         else:
             with torch.no_grad():
-                q_values = self.policy_net(self.new_state)
+                q_values = self.policy_net(self.new_state.to(self.device))
                 return torch.argmax(q_values).item()
 
 
@@ -145,6 +145,6 @@ class Agent(object):
         self.target_net.load_state_dict(self.policy_net.state_dict())
 
     def store_transition(self, action, reward, done):
-        action = torch.Tensor([[action]]).long().to(self.device)
-        reward = torch.tensor([reward], dtype=torch.float32).to(self.device)
+        action = torch.Tensor([[action]]).long()
+        reward = torch.tensor([reward], dtype=torch.float32)
         self.memory.push(self.previous_state, action, self.new_state, reward, done)
