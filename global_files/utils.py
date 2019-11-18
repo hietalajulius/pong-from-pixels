@@ -49,13 +49,14 @@ def tensor_from_observation(observation):
     print("im resized", resized.shape)
     print("im gray", grayImage.shape)
     print("im black", blackAndWhiteImage.shape)
-    cv2.imwrite("./screenshots/my orig.png", state)
-    cv2.imwrite('./screenshots/my res.png', resized)
-    cv2.imwrite('./screenshots/my gr.png', gray_image)
+    cv2.imwrite("../local_files/screenshots/my orig.png", state)
+    cv2.imwrite('./local_files_screenshots/my res.png', resized)
+    cv2.imwrite('../local_files/screenshots/my gr.png', gray_image)
+    
     
     rand = np.random.uniform()
     if rand > 0.95:
-        cv2.imwrite('./screenshots/my_bl +'+ str(rand) +'.png', black_and_white_image)
+        cv2.imwrite('./local_files/screenshots/my_bl +'+ str(rand) +'.png', black_and_white_image)
     '''
     
 

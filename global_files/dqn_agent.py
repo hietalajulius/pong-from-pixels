@@ -35,7 +35,7 @@ class DQN(nn.Module):
         return self.head(x.view(x.size(0), -1))
 
     def load_trained_model(self):
-        model_filename = 'net_at_12876_games.pth'
+        model_filename = '../local_files/trained_nets/net_at_12876_games.pth'
         self.load_state_dict(torch.load(model_filename, map_location=lambda storage, loc: storage))
         print('Trained model loaded from %s.' % model_filename)
         self.eval()

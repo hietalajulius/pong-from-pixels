@@ -44,6 +44,8 @@ games = 0
 
 #for i in range(0,episodes):
 if player.train:
+    #Test network saving
+    torch.save(player.policy_net.state_dict(), "../local_files/trained_nets/net_at_start.pth")
     while player.frames_seen < player.target_frames:
         done = False
         games += 1
@@ -72,7 +74,7 @@ if player.train:
                 win1 += 1
 
             if player.frames_seen % 100000 == 0:
-                torch.save(player.policy_net.state_dict(), "./trained_nets/net_at_"+ str(games) +"_games.pth")
+                torch.save(player.policy_net.state_dict(), "../local_files/trained_nets/net_at_"+ str(games) +"_games.pth")
             if not args.headless:
                 env.render()
             if done:
@@ -89,7 +91,7 @@ if player.train:
                 
                 player.reset()
 
-    torch.save(player.policy_net.state_dict(), "./trained_nets/net_at_end.pth")
+    torch.save(player.policy_net.state_dict(), "../local_files/trained_nets/net_at_end.pth")
 else:
     player.load_model()
     for games in range(100):
