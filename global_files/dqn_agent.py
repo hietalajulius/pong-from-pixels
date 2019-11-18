@@ -42,8 +42,8 @@ class DQN(nn.Module):
 
 
 class Agent(object):
-    def __init__(self, replay_buffer_size=100000,
-                 batch_size=32, gamma=0.999):
+    def __init__(self, replay_buffer_size=500000,
+                 batch_size=32, gamma=0.99):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.n_actions = 3
         self.policy_net = DQN().to(self.device)
