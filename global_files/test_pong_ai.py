@@ -66,13 +66,13 @@ if player.train:
 
             if player.frames_seen % TARGET_UPDATE == 0:
                 player.update_target_network()
-
+                
             # Count the wins
             if reward == 10:
                 win1 += 1
 
             if player.frames_seen % 100000 == 0:
-                torch.save(player.policy_net.state_dict(), "./local_files/trained_nets/net_at_"+ str(games) +"_games.pth")
+                torch.save(player.policy_net.state_dict(), "./trained_nets/net_at_"+ str(games) +"_games.pth")
             if not args.headless:
                 env.render()
             if done:
@@ -89,7 +89,7 @@ if player.train:
                 
                 player.reset()
 
-    torch.save(player.policy_net.state_dict(), "./local_files/trained_nets/net_at_end.pth")
+    torch.save(player.policy_net.state_dict(), "./trained_nets/net_at_end.pth")
 else:
     player.load_model()
     for games in range(100):
