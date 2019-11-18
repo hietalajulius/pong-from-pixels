@@ -34,7 +34,7 @@ player_id = 1
 # Set up the player here. We used the SimpleAI that does not take actions for now
 player = DqnAgent()#wimblepong.SimpleAi(env, player_id)
 
-TARGET_UPDATE = 2000
+TARGET_UPDATE = 10000
 
 # Housekeeping
 states = []
@@ -58,8 +58,14 @@ if player.train:
             action = player.get_action(observation)
 
             observation, reward, done, info = env.step(action)
+            if reward < 0:
+                clipped_reward = -1
+            elif reward > 0:
+                clipped_reward = 1
+            else:
+                clipped_reward = 0
 
-            player.store_transition(action, reward, done)
+            player.store_transition(action, clipped_reward, done)
             player.update_network()
             
 
