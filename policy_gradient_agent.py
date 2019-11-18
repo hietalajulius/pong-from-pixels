@@ -1,51 +1,15 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.distributions.categorical import Categorical
+from policy_gradient_policies.vgg_policy import VggPolicy
+from policy_gradient_policies.cnn_policy import CnnPolicy
+from policy_gradient_policies.resnet18_policy import RnnPolicy
 import numpy as np
 from PIL import Image
 import time
-
-
-def discount_rewards(r, gamma):
-    discounted_r = torch.zeros_like(r)
-    running_add = 0
-    for t in reversed(range(0, r.size(-1))):
-        running_add = running_add * gamma + r[t]
-        discounted_r[t] = running_add
-    return discounted_r
-
-
-class Policy(torch.nn.Module):
-    def __init__(self, state_space, action_space):
-        super().__init__()
-        self.state_space = state_space
-        self.action_space = action_space
-        self.hidden = 64
-
-        self.conv1 = nn.Conv2d(3, 16, 10, padding=0)
-        self.conv2 = nn.Conv2d(16, 32, 10, padding=0)
-        self.fc1 = nn.Linear((43 * 43 *32), 120)
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 3)
-
-        self.softmax = torch.nn.Softmax()
-        #self.init_weights()
-
-    def init_weights(self):
-        for m in self.modules():
-            if type(m) is torch.nn.Linear:
-                torch.nn.init.normal_(m.weight)
-                torch.nn.init.zeros_(m.bias)
-
-    def forward(self, x):
-        x = F.max_pool2d(F.relu(self.conv1(x)), (2, 2))
-        x = F.max_pool2d(F.relu(self.conv2(x)), (2, 2))
-        x = x.view(-1, (32 * 43 * 43))
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        x = self.softmax(x)
-        return x
+import cv2
+from utils import discount_rewards
 
 
 class Agent(object):
@@ -56,23 +20,43 @@ class Agent(object):
         else:
             print("cpu")
             self.train_device = "cpu"
-        self.policy = Policy(200*200*3, 3).to(self.train_device)
+        self.policy = RnnPolicy().to(self.train_device)
         self.optimizer = torch.optim.RMSprop(self.policy.parameters(), lr=5e-3)
-        self.gamma = 0.98
+        self.gamma = 0.99
         self.states = []
         self.action_probs = []
         self.rewards = []
 
 
     def get_action(self, observation):
-        self.states.append(observation)
-        flat = torch.tensor([observation], dtype=torch.float).permute((0,3,1,2)).to(self.train_device)
-        action = self.policy(flat)
+        #resized = cv2.resize(observation, (28,28), interpolation = cv2.INTER_AREA)
+        #grayImage = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
+        #_, blackAndWhiteImage = cv2.threshold(grayImage, 50, 255, cv2.THRESH_BINARY)
 
-        self.action_probs.append(torch.tensor([np.amax(action.detach().cpu().numpy())], requires_grad=True))
-        print("action", action)
-        ps = action.detach().cpu().numpy().flatten()
-        return np.random.choice([0,1,2],p=ps)
+        #print("im orig", observation.shape)
+        #print("im resized", resized.shape)
+        #print("im gray", grayImage.shape)
+        #print("im black", blackAndWhiteImage.shape)
+        #cv2.imwrite("my orig.png", observation)
+        #cv2.imwrite('my res.png', resized)
+        #cv2.imwrite('my gr.png', grayImage)
+        #cv2.imwrite('my bl.png', blackAndWhiteImage)
+
+
+        self.states.append(observation)
+        #flat = torch.tensor([[blackAndWhiteImage]], dtype=torch.float).to(self.train_device)
+        flat = torch.tensor([observation], dtype=torch.float).permute((0,3,1,2)).to(self.train_device)
+        dist = self.policy(flat)
+
+        action = dist.sample()
+        prob = dist.log_prob(action)
+
+        self.action_probs.append(prob)
+
+        return action
+
+    def load_model(self):
+        self.policy.load_trained_model()
 
     def get_name(self):
         return "Better than you"
@@ -88,10 +72,9 @@ class Agent(object):
 
         # TODO: Compute discounted rewards (use the discount_rewards function)
         discounted_rewards = discount_rewards(rewards, self.gamma)
-
         discounted_rewards -= torch.mean(discounted_rewards) # only for Task 1 (c) and keep for Task 2
         discounted_rewards /= torch.std(discounted_rewards) # only for Task 1 (c) and keep for Task 2
-
+        
         episode_tensor = torch.tensor(range(len(discounted_rewards)), dtype=torch.float)
         gammas = torch.zeros_like(episode_tensor) + torch.tensor([self.gamma], dtype=torch.float)
         gamma_powers = torch.pow(gammas,episode_tensor).to(self.train_device)

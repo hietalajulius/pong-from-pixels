@@ -9,7 +9,9 @@ import gym
 import numpy as np
 import argparse
 import wimblepong
-from agent import Agent
+from policy_gradient_agent import Agent as PolicyAgent
+from dqn_agent import Agent as DqnAgent
+import torch
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--headless", action="store_true", help="Run in headless mode")
@@ -24,45 +26,91 @@ env.unwrapped.scale = args.scale
 env.unwrapped.fps = args.fps
 
 # Number of episodes/games to play
-episodes = 100000
+
+
 
 # Define the player
 player_id = 1
 # Set up the player here. We used the SimpleAI that does not take actions for now
-player = Agent()#wimblepong.SimpleAi(env, player_id)
+player = DqnAgent()#wimblepong.SimpleAi(env, player_id)
+
+TARGET_UPDATE = 2000
 
 # Housekeeping
 states = []
 win1 = 0
 env.set_names(player.get_name())
+games = 0
 
-for i in range(0,episodes):
-    done = False
-    observation= env.reset()
-    while not done:
-        # action1 is zero because in this example no agent is playing as player 0
-        action = player.get_action(observation)
+#for i in range(0,episodes):
+if player.train:
+    while player.frames_seen < player.target_frames:
+        done = False
+        games += 1
+        observation = env.reset()
+        action = 0
+        steps = 0
+        while not done:
+            steps += 1
+            previous_observation = observation
+            action = player.get_action(observation)
 
-        observation, rew1, done, info = env.step(action)
-        player.store_reward(rew1)
+            observation, reward, done, info = env.step(action)
 
-        if args.housekeeping:
-            states.append(observation)
-        # Count the wins
-        if rew1 == 10:
-            win1 += 1
-        if not args.headless:
-            env.render()
-        if done:
+            player.store_transition(action, reward, done)
             player.update_network()
-            observation= env.reset()
-            plt.close()  # Hides game window
-            if args.housekeeping:
-                plt.plot(states)
-                plt.legend(["Player", "Opponent", "Ball X", "Ball Y", "Ball vx", "Ball vy"])
-                plt.show()
-                states.clear()
-            print("episode {} over. Broken WR: {:.3f}".format(i, win1/(i+1)))
-            if i % 5 == 4:
-                env.switch_sides()
+            
 
+            if args.housekeeping:
+                states.append(observation)
+
+            if player.frames_seen % TARGET_UPDATE == 0:
+                player.update_target_network()
+            # Count the wins
+            if reward == 10:
+                win1 += 1
+
+            if player.frames_seen % 100000 == 0:
+                torch.save(player.policy_net.state_dict(), "./trained_nets/net_at_"+ str(games) +"_games.pth")
+            if not args.headless:
+                env.render()
+            if done:
+                observation= env.reset()
+                plt.close()  # Hides game window
+                if args.housekeeping:
+                    plt.plot(states)
+                    plt.legend(["Player", "Opponent", "Ball X", "Ball Y", "Ball vx", "Ball vy"])
+                    plt.show()
+                    states.clear()
+                print("episode {} over. Broken WR: {:.3f}".format(games, win1/(games+1)), "wins:", win1, "steps:", steps, "frames seen:", player.frames_seen, "epsilon:", player.epsilon)
+                if games % 5 == 4:
+                    env.switch_sides()
+                
+                player.reset()
+
+    torch.save(player.policy_net.state_dict(), "./trained_nets/net_at_end.pth")
+else:
+    player.load_model()
+    for games in range(100):
+        done = False
+        observation = env.reset()
+        action = 0
+        steps = 0
+        while not done:
+            steps += 1
+            action = player.get_action(observation)
+            observation, reward, done, info = env.step(action)
+
+            # Count the wins
+            if reward == 10:
+                win1 += 1
+
+            if not args.headless:
+                env.render()
+            if done:
+                observation= env.reset()
+                plt.close()  # Hides game window
+                print("episode {} over. Broken WR: {:.3f}".format(games, win1/(games+1)), "wins:", win1, "steps:", steps, "frames seen:", player.frames_seen, "epsilon:", player.epsilon)
+                if games % 5 == 4:
+                    env.switch_sides()
+                

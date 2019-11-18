@@ -1,3 +1,5 @@
 .DS_Store
 RL_course_project.pdf
 __pycache__/
+screenshots
+trained_nets
