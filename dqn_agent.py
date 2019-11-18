@@ -60,7 +60,7 @@ class Agent(object):
         self.epsilon = 0.1
         self.frames_seen = 0
         self.target_epsilon = 0.1
-        self.target_frames = 10000000
+        self.target_frames = 5000000
         self.a = int((self.target_epsilon*self.target_frames)/(1-self.target_epsilon))
         self.train = True
 

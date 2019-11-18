@@ -2,6 +2,7 @@ import torch
 import random
 from collections import namedtuple
 import cv2
+import numpy as np
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -51,8 +52,12 @@ def tensor_from_observation(observation):
     cv2.imwrite("./screenshots/my orig.png", state)
     cv2.imwrite('./screenshots/my res.png', resized)
     cv2.imwrite('./screenshots/my gr.png', gray_image)
-    cv2.imwrite('./screenshots/my bl.png', black_and_white_image)
+    
+    rand = np.random.uniform()
+    if rand > 0.95:
+        cv2.imwrite('./screenshots/my_bl +'+ str(rand) +'.png', black_and_white_image)
     '''
+    
 
     state = black_and_white_image.reshape((1,1,84,84))
     state = torch.from_numpy(state).float()

@@ -66,6 +66,7 @@ if player.train:
 
             if player.frames_seen % TARGET_UPDATE == 0:
                 player.update_target_network()
+                
             # Count the wins
             if reward == 10:
                 win1 += 1
