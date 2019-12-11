@@ -6,5 +6,5 @@ trained_nets
 local_files
 global_files
 misc
-test_agent
+test_agents
 test_agent_weights
