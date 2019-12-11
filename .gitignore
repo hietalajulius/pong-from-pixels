@@ -3,3 +3,8 @@ RL_course_project.pdf
 __pycache__/
 screenshots
 trained_nets
+local_files
+global_files
+misc
+test_agent
+test_agent_weights
